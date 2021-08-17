@@ -1,12 +1,12 @@
 defmodule SeaweedfsSnapshotsDb do
   use Broadway
 
-  def start_link(_arg) do
+  def start_link(_opts) do
     Broadway.start_link(__MODULE__,
       name: __MODULE__,
       producer: [
         module: {BroadwayKafka.Producer, [
-          hosts: [{"95.217.2.239", 9092}],
+          hosts: [localhost: 9092],
           group_id: "group_1",
           topics: ["snapshot_db"],
         ]},
