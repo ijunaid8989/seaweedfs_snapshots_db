@@ -22,7 +22,10 @@ defmodule SeaweedfsSnapshotsDb.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:broadway_kafka, "~> 0.1.1"}
+      {:broadway_kafka, "~> 0.1.1"},
+      {:protox, "~> 1.5"},
+      {:ecto_sql, "~> 3.0"},
+      {:postgrex, ">= 0.0.0"}
     ]
   end
 end

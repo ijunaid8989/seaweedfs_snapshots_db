@@ -5,11 +5,13 @@ defmodule SeaweedfsSnapshotsDb do
     Broadway.start_link(__MODULE__,
       name: __MODULE__,
       producer: [
-        module: {BroadwayKafka.Producer, [
-          hosts: [localhost: 9092],
-          group_id: "group_1",
-          topics: ["snapshotsDB"],
-        ]},
+        module:
+          {BroadwayKafka.Producer,
+           [
+             hosts: [localhost: 9092],
+             group_id: "group_1",
+             topics: ["snapshotsDB"]
+           ]},
         concurrency: 1
       ],
       processors: [
@@ -21,6 +23,8 @@ defmodule SeaweedfsSnapshotsDb do
   end
 
   def handle_message(_, message, _) do
-    IO.inspect(message, label: "Got message")
+    {:ok, data} = FilerPb.EventNotification.decode(message.data)
+    EventNotification.upcoming_events(message, data)
+    message
   end
 end

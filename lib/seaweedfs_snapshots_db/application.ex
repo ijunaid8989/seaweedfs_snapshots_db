@@ -8,7 +8,8 @@ defmodule SeaweedfsSnapshotsDb.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      {SeaweedfsSnapshotsDb, []}
+      {SeaweedfsSnapshotsDb, []},
+      {Snapshots.Repo, []}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
