@@ -8,7 +8,7 @@ defmodule SeaweedfsSnapshotsDb do
         module: {BroadwayKafka.Producer, [
           hosts: [localhost: 9092],
           group_id: "group_1",
-          topics: ["snapshot_db"],
+          topics: ["snapshotsDB"],
         ]},
         concurrency: 1
       ],
