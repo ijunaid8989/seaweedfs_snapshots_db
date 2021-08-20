@@ -8,9 +8,7 @@ defmodule Snapshots do
     field(:number, :integer, virtual: true)
   end
 
-  def add_snapshot(camera_exid, timestamp) do
-    {:ok, datetime} = DateTime.from_unix(timestamp)
-
+  def add_snapshot(camera_exid, datetime) do
     %Snapshots{snapshot_timestamp: datetime}
     |> Ecto.put_meta(source: camera_exid)
     |> Snapshots.Repo.insert(on_conflict: :nothing)
