@@ -19,13 +19,12 @@ defmodule EventNotification do
            "seconds" => seconds,
            "year" => year,
            "camera_exid" => camera_exid
-         } <- Regex.named_captures(@url_format, path <> "/" <> file_name) do
-      datetime =
-        "#{year}-#{month}-#{day}T#{hour}:#{minutes}:#{seconds}Z"
-        |> DateTime.from_iso8601()
-        |> elem(1)
+         } <- Regex.named_captures(@url_format, path <> "/" <> file_name),
+         true <- camera_exid in ["andaz-rkugf", "everc-shawt"] do
+      "#{year}-#{month}-#{day}T#{hour}:#{minutes}:#{seconds}Z"
+      |> DateTime.from_iso8601()
+      |> Snapshots.add_snapshot(camera_exid)
 
-      Snapshots.add_snapshot(camera_exid, datetime)
       Logger.debug("NIL")
     else
       _ ->

@@ -1,6 +1,8 @@
 defmodule Snapshots do
   import Ecto.Changeset
 
+  require Logger
+
   use Ecto.Schema
 
   @primary_key {:snapshot_timestamp, :utc_datetime, []}
@@ -8,7 +10,9 @@ defmodule Snapshots do
     field(:number, :integer, virtual: true)
   end
 
-  def add_snapshot(camera_exid, datetime) do
+  def add_snapshot({:error, _reason}, _camera_exid), do: Logger.debug("NIL")
+
+  def add_snapshot({:ok, datetime, _offset}, camera_exid) do
     %Snapshots{snapshot_timestamp: datetime}
     |> Ecto.put_meta(source: camera_exid)
     |> Snapshots.Repo.insert(on_conflict: :nothing)
