@@ -9,34 +9,53 @@ defmodule EventNotification do
 
   def upcoming_events(_message, %FilerPb.EventNotification{
         new_entry: %FilerPb.Entry{name: file_name},
+        old_entry: nil,
         new_parent_path: path
       }) do
-    with %{
-           "day" => day,
-           "hour" => hour,
-           "minute" => minutes,
-           "month" => month,
-           "seconds" => seconds,
-           "year" => year,
-           "camera_exid" => camera_exid
-         } <- Regex.named_captures(@url_format, path <> "/" <> file_name),
-         true <- camera_exid in ["andaz-rkugf", "everc-shawt"] do
-      "#{year}-#{month}-#{day}T#{hour}:#{minutes}:#{seconds}Z"
+    with {:ok, timestamp, camera_exid} <- url_to_timestamp(path, file_name),
+        true <- Ecto.Adapters.SQL.table_exists?(Snapshots.Repo, camera_exid) do
+      timestamp
       |> DateTime.from_iso8601()
       |> Snapshots.add_snapshot(camera_exid)
 
-      Logger.debug("NIL")
+      Logger.debug("Done")
     else
       _ ->
-        Logger.debug("NIL")
+        Logger.debug("Nope")
     end
   end
 
-  def upcoming_events(%Broadway.Message{metadata: %{key: full_path}}, %FilerPb.EventNotification{
+  def upcoming_events(%Broadway.Message{metadata: %{key: path}}, %FilerPb.EventNotification{
         new_entry: nil,
-        new_parent_path: "",
-        old_entry: %FilerPb.Entry{}
+        old_entry: %FilerPb.Entry{name: file_name},
       }) do
-    # Todo
+    with {:ok, timestamp, camera_exid} <- url_to_timestamp(path, file_name),
+        true <- Ecto.Adapters.SQL.table_exists?(Snapshots.Repo, camera_exid) do
+      timestamp
+      |> DateTime.from_iso8601()
+      |> Snapshots.delete_snapshot(camera_exid)
+
+      Logger.debug("Done")
+    else
+      _ ->
+        Logger.debug("Nope")
+    end
+  end
+
+  defp url_to_timestamp(path, file_name) do
+    with %{
+          "day" => day,
+          "hour" => hour,
+          "minute" => minutes,
+          "month" => month,
+          "seconds" => seconds,
+          "year" => year,
+          "camera_exid" => camera_exid
+        } <- Regex.named_captures(@url_format, path <> "/" <> file_name) do
+      {:ok, "#{year}-#{month}-#{day}T#{hour}:#{minutes}:#{seconds}Z", camera_exid}
+    else
+      _ ->
+        nil
+    end
   end
 end
