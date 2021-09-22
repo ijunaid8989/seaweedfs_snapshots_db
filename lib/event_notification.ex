@@ -7,55 +7,70 @@ defmodule EventNotification do
     Logger.debug("NIL")
   end
 
+  ##########
+  # INSERT #
+  ##########
   def upcoming_events(_message, %FilerPb.EventNotification{
         new_entry: %FilerPb.Entry{name: file_name},
         old_entry: nil,
         new_parent_path: path
       }) do
     with {:ok, timestamp, camera_exid} <- url_to_timestamp(path, file_name),
-        true <- Ecto.Adapters.SQL.table_exists?(Snapshots.Repo, camera_exid) do
-      timestamp
-      |> DateTime.from_iso8601()
-      |> Snapshots.add_snapshot(camera_exid)
-
-      Logger.debug("Done")
+         pid when not is_nil(pid) <- find_worker(camera_exid),
+         {:ok, timestamp, _offset} <- DateTime.from_iso8601(timestamp) do
+      SeaweedfsWorker.update_snapshots(pid, timestamp)
     else
       _ ->
-        Logger.debug("Nope")
+        :noop
     end
   end
 
+  ##########
+  # UPDATE #
+  ##########
+  def upcoming_events(_message, %FilerPb.EventNotification{
+        new_entry: %FilerPb.Entry{name: new_file_name},
+        old_entry: %FilerPb.Entry{name: old_file_name},
+        new_parent_path: path
+      }), do: :noop
+
+  ##########
+  # DELETE #
+  ##########
   def upcoming_events(%Broadway.Message{metadata: %{key: path}}, %FilerPb.EventNotification{
         new_entry: nil,
-        old_entry: %FilerPb.Entry{name: file_name},
+        old_entry: %FilerPb.Entry{name: file_name}
       }) do
     with {:ok, timestamp, camera_exid} <- url_to_timestamp(path, file_name),
-        true <- Ecto.Adapters.SQL.table_exists?(Snapshots.Repo, camera_exid) do
-      timestamp
-      |> DateTime.from_iso8601()
-      |> Snapshots.delete_snapshot(camera_exid)
-
-      Logger.debug("Done")
+         pid when not is_nil(pid) <- find_worker(camera_exid),
+         {:ok, timestamp, _offset} <- DateTime.from_iso8601(timestamp) do
+      SeaweedfsWorker.delete_snapshot(pid, timestamp)
     else
       _ ->
-        Logger.debug("Nope")
+        :noop
     end
   end
 
   defp url_to_timestamp(path, file_name) do
     with %{
-          "day" => day,
-          "hour" => hour,
-          "minute" => minutes,
-          "month" => month,
-          "seconds" => seconds,
-          "year" => year,
-          "camera_exid" => camera_exid
-        } <- Regex.named_captures(@url_format, path <> "/" <> file_name) do
+           "day" => day,
+           "hour" => hour,
+           "minute" => minutes,
+           "month" => month,
+           "seconds" => seconds,
+           "year" => year,
+           "camera_exid" => camera_exid
+         } <- Regex.named_captures(@url_format, path <> "/" <> file_name) do
       {:ok, "#{year}-#{month}-#{day}T#{hour}:#{minutes}:#{seconds}Z", camera_exid}
     else
       _ ->
-        nil
+        {:timestamp_error, path <> "/" <> file_name}
     end
+  end
+
+  defp find_worker(camera_exid) do
+    camera_exid
+    |> String.to_atom()
+    |> Process.whereis()
   end
 end

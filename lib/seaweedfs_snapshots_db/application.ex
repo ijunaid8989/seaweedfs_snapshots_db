@@ -9,7 +9,8 @@ defmodule SeaweedfsSnapshotsDb.Application do
   def start(_type, _args) do
     children = [
       {SeaweedfsSnapshotsDb, []},
-      {Snapshots.Repo, []}
+      {Snapshots.Repo, []},
+      {SeaweedfsSupervisor, []}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

@@ -8,15 +8,17 @@ defmodule SeaweedfsSnapshotsDb do
         module:
           {BroadwayKafka.Producer,
            [
-             hosts: [localhost: 9092],
-             group_id: "group_1",
-             topics: ["snapshotsDB"]
+              hosts: [localhost: 9092],
+              group_id: "group_1",
+              topics: ["snapshotsDB"],
+              offset_commit_on_ack: false,
+              offset_commit_interval_seconds: 30
            ]},
-        concurrency: 1
+        concurrency: 10
       ],
       processors: [
         default: [
-          concurrency: 10
+          concurrency: 50
         ]
       ]
     )
