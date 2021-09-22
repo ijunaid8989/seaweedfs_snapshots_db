@@ -19,6 +19,7 @@ defmodule SeaweedfsWorker do
 
   def update_snapshots(pid, timestamp) do
     snapshots = GenServer.call(pid, {:update_snapshots, timestamp})
+
     if length(snapshots) >= 1 do
       GenServer.call(pid, :insert_snapshots)
     end
@@ -30,7 +31,7 @@ defmodule SeaweedfsWorker do
 
   def handle_call({:update_snapshots, timestamp}, _from, state) do
     new_state =
-        Map.replace(state, :timestamps, [%{snapshot_timestamp: timestamp} | state.timestamps])
+      Map.replace(state, :timestamps, [%{snapshot_timestamp: timestamp} | state.timestamps])
 
     {:reply, new_state.timestamps, new_state}
   end

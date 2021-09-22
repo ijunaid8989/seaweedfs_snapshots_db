@@ -32,7 +32,8 @@ defmodule EventNotification do
         new_entry: %FilerPb.Entry{name: new_file_name},
         old_entry: %FilerPb.Entry{name: old_file_name},
         new_parent_path: path
-      }), do: :noop
+      }),
+      do: :noop
 
   ##########
   # DELETE #
