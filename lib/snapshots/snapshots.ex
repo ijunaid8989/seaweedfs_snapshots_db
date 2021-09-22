@@ -1,5 +1,6 @@
 defmodule Snapshots do
   import Ecto.Changeset
+  import Ecto.Query
 
   require Logger
 
@@ -10,12 +11,15 @@ defmodule Snapshots do
     field(:number, :integer, virtual: true)
   end
 
-  def add_snapshot({:error, _reason}, _camera_exid), do: Logger.debug("NIL")
+  def add_snapshots(query \\ __MODULE__, timestamps, camera_exid) do
+    {camera_exid, query}
+    |> Snapshots.Repo.insert_all(timestamps, on_conflict: :nothing)
+  end
 
-  def add_snapshot({:ok, datetime, _offset}, camera_exid) do
-    %Snapshots{snapshot_timestamp: datetime}
-    |> Ecto.put_meta(source: camera_exid)
-    |> Snapshots.Repo.insert(on_conflict: :nothing)
+  def delete_snapshot(query \\ __MODULE__, timestamp, camera_exid) do
+    {camera_exid, query}
+    |> where([s], s.snapshot_timestamp == ^timestamp)
+    |> Snapshots.Repo.delete_all()
   end
 
   def changeset(model, params \\ :invalid) do

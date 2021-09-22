@@ -7,10 +7,52 @@ defmodule EventNotification do
     Logger.debug("NIL")
   end
 
+  ##########
+  # INSERT #
+  ##########
   def upcoming_events(_message, %FilerPb.EventNotification{
         new_entry: %FilerPb.Entry{name: file_name},
+        old_entry: nil,
         new_parent_path: path
       }) do
+    with {:ok, timestamp, camera_exid} <- url_to_timestamp(path, file_name),
+         pid when not is_nil(pid) <- find_worker(camera_exid),
+         {:ok, timestamp, _offset} <- DateTime.from_iso8601(timestamp) do
+      SeaweedfsWorker.update_snapshots(pid, timestamp)
+    else
+      _ ->
+        :noop
+    end
+  end
+
+  ##########
+  # UPDATE #
+  ##########
+  def upcoming_events(_message, %FilerPb.EventNotification{
+        new_entry: %FilerPb.Entry{name: new_file_name},
+        old_entry: %FilerPb.Entry{name: old_file_name},
+        new_parent_path: path
+      }),
+      do: :noop
+
+  ##########
+  # DELETE #
+  ##########
+  def upcoming_events(%Broadway.Message{metadata: %{key: path}}, %FilerPb.EventNotification{
+        new_entry: nil,
+        old_entry: %FilerPb.Entry{name: file_name}
+      }) do
+    with {:ok, timestamp, camera_exid} <- url_to_timestamp(path, file_name),
+         pid when not is_nil(pid) <- find_worker(camera_exid),
+         {:ok, timestamp, _offset} <- DateTime.from_iso8601(timestamp) do
+      SeaweedfsWorker.delete_snapshot(pid, timestamp)
+    else
+      _ ->
+        :noop
+    end
+  end
+
+  defp url_to_timestamp(path, file_name) do
     with %{
            "day" => day,
            "hour" => hour,
@@ -19,24 +61,17 @@ defmodule EventNotification do
            "seconds" => seconds,
            "year" => year,
            "camera_exid" => camera_exid
-         } <- Regex.named_captures(@url_format, path <> "/" <> file_name),
-         true <- camera_exid in ["andaz-rkugf", "everc-shawt"] do
-      "#{year}-#{month}-#{day}T#{hour}:#{minutes}:#{seconds}Z"
-      |> DateTime.from_iso8601()
-      |> Snapshots.add_snapshot(camera_exid)
-
-      Logger.debug("NIL")
+         } <- Regex.named_captures(@url_format, path <> "/" <> file_name) do
+      {:ok, "#{year}-#{month}-#{day}T#{hour}:#{minutes}:#{seconds}Z", camera_exid}
     else
       _ ->
-        Logger.debug("NIL")
+        {:timestamp_error, path <> "/" <> file_name}
     end
   end
 
-  def upcoming_events(%Broadway.Message{metadata: %{key: full_path}}, %FilerPb.EventNotification{
-        new_entry: nil,
-        new_parent_path: "",
-        old_entry: %FilerPb.Entry{}
-      }) do
-    # Todo
+  defp find_worker(camera_exid) do
+    camera_exid
+    |> String.to_atom()
+    |> Process.whereis()
   end
 end
