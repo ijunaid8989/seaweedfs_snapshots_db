@@ -20,7 +20,7 @@ defmodule SeaweedfsWorker do
   def update_snapshots(pid, timestamp) do
     snapshots = GenServer.call(pid, {:update_snapshots, timestamp})
 
-    if length(snapshots) >= 1 do
+    if length(snapshots) > 100 do
       GenServer.call(pid, :insert_snapshots)
     end
   end
